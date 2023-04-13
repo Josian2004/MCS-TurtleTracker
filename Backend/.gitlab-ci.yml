@@ -1,0 +1,75 @@
+image: docker:latest
+
+
+stages:
+    - build
+    - test
+    - package
+    - deploy
+
+build:
+    stage: build
+    image: eclipse-temurin:17-jdk-alpine
+    before_script:
+        - chmod +x mvnw
+    script: "./mvnw install"
+    artifacts:
+        paths:
+        - target
+
+run_tests:
+    stage: test
+    image: eclipse-temurin:17-jdk-alpine
+    before_script:
+        - chmod +x mvnw
+    script:
+        - ./mvnw test
+
+sonarqube-check:
+    stage: test
+    image: 
+        name: sonarsource/sonar-scanner-cli:latest
+        entrypoint: [""]
+    variables:
+        SONAR_USER_HOME: "${CI_PROJECT_DIR}/.sonar"
+        GIT_DEPTH: "0"
+    cache:
+        key: "${CI_JOB_NAME}"
+        paths:
+        - .sonar/cache
+    script: 
+        - sonar-scanner
+    allow_failure: true
+
+
+package:
+    stage: package
+    rules:
+        - if: '$CI_COMMIT_BRANCH == "main"'    
+    script:
+        - docker build . -t $REGISTRY_URL/mcst_backend:latest
+        - docker login -u $REGISTRY_USERNAME -p $REGISTRY_PASSWORD $REGISTRY_URL
+        - docker push $REGISTRY_URL/mcst_backend:latest
+
+deploy:
+    stage: deploy
+    image: alpine:latest
+    rules:
+        - if: '$CI_COMMIT_BRANCH == "main"'
+    before_script:
+        - mkdir -p ~/.ssh
+        - chmod 700 ~/.ssh
+
+        - apk update && apk add openssh-client bash
+        - eval $(ssh-agent -s)
+
+        - bash -c 'ssh-add <(echo "$SSH_PRIVATE_KEY")'
+
+    script:
+        - ssh -o StrictHostKeyChecking=no -p $SSH_PORT $SSH_USER@$SSH_URL "
+            docker-compose -f /media/josian/Hard\ Disk/Apps/MCST/Docker-compose/Backend/docker-compose.yml down &&
+            docker login -u $REGISTRY_USERNAME -p $REGISTRY_PASSWORD $REGISTRY_URL &&
+            docker pull $REGISTRY_URL/mcst_backend:latest &&
+            docker-compose -f /media/josian/Hard\ Disk/Apps/MCST/Docker-compose/Backend/docker-compose.yml up -d"
+
+

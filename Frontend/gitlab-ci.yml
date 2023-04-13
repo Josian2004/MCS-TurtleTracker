@@ -1,0 +1,51 @@
+image: docker:latest
+
+
+stages:
+    - test
+    - package
+    - deploy
+
+# run_tests:
+#     stage: test
+#     image: eclipse-temurin:17-jdk-alpine
+#     before_script:
+#         - chmod +x mvnw
+#     script:
+#         - ./mvnw test
+
+package:
+    stage: package
+    rules:
+        - if: '$CI_COMMIT_BRANCH == "main"'    
+    script:
+        - docker build . -t docker.josian.nl/mcst_webapp
+        #- docker login -u gitlab-ci-token -p $CI_BUILD_TOKEN registry.gitlab.com
+        - docker push docker.josian.nl/mcst_webapp
+
+deploy:
+    stage: deploy
+    image: alpine:latest
+    rules:
+        - if: '$CI_COMMIT_BRANCH == "main"'
+    before_script:
+        # - echo $SSH_PRIVATE_KEY
+        # - 'command -v ssh-agent >/dev/null || ( apk update && apk add openssh-client )'
+        # - eval $(ssh-agent -s)
+        # - echo -n $SSH_PRIVATE_KEY | tr -d '\r' | ssh-add -
+        - mkdir -p ~/.ssh
+        - chmod 700 ~/.ssh
+
+        - apk update && apk add openssh-client bash
+        - eval $(ssh-agent -s)
+
+        - bash -c 'ssh-add <(echo "$SSH_PRIVATE_KEY")'
+
+        # - ssh-keyscan josian.nl >> ~/.ssh/known_hosts
+        # - chmod 644 ~/.ssh/known_hosts
+
+    script:
+        - ssh -o StrictHostKeyChecking=no -p 25005 josian@josian.nl "
+            docker-compose -f /media/josian/Hard\ Disk/Apps/MCST/Docker-compose/WebApp/docker-compose.yml down &&
+            docker pull docker.josian.nl/mcst_webapp:latest &&
+            docker-compose -f /media/josian/Hard\ Disk/Apps/MCST/Docker-compose/WebApp/docker-compose.yml up -d"

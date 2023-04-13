@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    
+
+  <link rel="apple-touch-icon" sizes="76x76" href="/apple-touch-icon.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+  <link rel="manifest" href="/manifest.webmanifest">
+  <link rel="mask-icon" href="/safari-pinned-tab.svg" color="#2b5797">
+  <meta name="msapplication-TileColor" content="#2b5797">
+  <meta name="theme-color" content="#0d0d19">
+  <meta http-equiv="Content-Security-Policy" content="upgrade-insecure-requests">
+
+
+    <title>MCS Turtle Tracker</title>
+    <meta name="description" content="This is an application which MCS Players can use to track all of the turtles">
+  </head>
+  <body>
+    <div id="app"></div>
+    <script type="module" src="/src/main.ts"></script>
+    <script type="module" src="/src/services/websocket/InfoWebSocket.ts"></script>
+    <script type="module" src="/src/services/websocket/LocationsWebSocket.ts"></script>
+    <script type="module" src="/src/services/websocket/MessagesWebSocket.ts"></script>
+    <script type="module" src="/src/services/websocket/InventoryWebSocket.ts"></script>
+  </body>
+</html>

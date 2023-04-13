@@ -1,0 +1,55 @@
+image: docker:latest
+
+
+stages:
+    - test
+    - package
+    - deploy
+
+# run_tests:
+#     stage: test
+#     image: eclipse-temurin:17-jdk-alpine
+#     before_script:
+#         - chmod +x mvnw
+#     script:
+#         - ./mvnw test
+
+
+lhci:
+    stage: test
+    image: cypress/browsers:node16.14.0-chrome99-ff97
+    script:
+        - npm install
+        - npm install -g @lhci/cli@0.9.x
+        - npm run build
+        - lhci autorun
+
+package:
+    stage: package
+    rules:
+        - if: '$CI_COMMIT_BRANCH == "main"'    
+    script:
+        - docker build . -t $REGISTRY_URL/mcst_webapp
+        - docker login -u $REGISTRY_USERNAME -p $REGISTRY_PASSWORD $REGISTRY_URL
+        - docker push $REGISTRY_URL/mcst_webapp
+
+deploy:
+    stage: deploy
+    image: alpine:latest
+    rules:
+        - if: '$CI_COMMIT_BRANCH == "main"'
+    before_script:
+        - mkdir -p ~/.ssh
+        - chmod 700 ~/.ssh
+
+        - apk update && apk add openssh-client bash
+        - eval $(ssh-agent -s)
+
+        - bash -c 'ssh-add <(echo "$SSH_PRIVATE_KEY")'
+
+    script:
+        - ssh -o StrictHostKeyChecking=no -p $SSH_PORT $SSH_USER@$SSH_URL "
+            docker-compose -f /media/josian/Hard\ Disk/Apps/MCST/Docker-compose/WebApp/docker-compose.yml down &&
+            docker login -u $REGISTRY_USERNAME -p $REGISTRY_PASSWORD $REGISTRY_URL &&
+            docker pull $REGISTRY_URL/mcst_webapp:latest &&
+            docker-compose -f /media/josian/Hard\ Disk/Apps/MCST/Docker-compose/WebApp/docker-compose.yml up -d"
